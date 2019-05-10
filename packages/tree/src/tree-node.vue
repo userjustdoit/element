@@ -9,7 +9,9 @@
       'is-current': node.isCurrent,
       'is-hidden': !node.visible,
       'is-focusable': !node.disabled,
-      'is-checked': !node.disabled && node.checked
+      'is-checked': !node.disabled && node.checked,
+      'is-select':node.data.select,
+      'is-unselect':!node.data.select
     }"
     role="treeitem"
     tabindex="-1"
