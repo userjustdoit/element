@@ -25,6 +25,7 @@
     @drop.stop="handleDrop"
     ref="node"
   >
+    <span class="label-id" v-if="node.data.select&&node.data.selectIndex">{{node.data.selectIndex}}</span>
     <div class="el-tree-node__content"
       :style="{ 'padding-left': (node.level - 1) * tree.indent + 'px' }">
       <span
