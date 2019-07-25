@@ -25,9 +25,7 @@
     @drop.stop="handleDrop"
     ref="node"
   >
-    <div  class="label-panel" v-if="node.data.select&&node.data.selectIndex">
-    <span class="label-id" >{{node.data.selectIndex}}</span>
-    </div>
+    <node-content :node="node" :slotName="'contentBefore'"></node-content>
     <div class="el-tree-node__content"
       :style="{ 'padding-left': (node.level - 1) * tree.indent + 'px' }">
       <span
@@ -54,6 +52,7 @@
       </span>
       <node-content :node="node"></node-content>
     </div>
+    <node-content :node="node" :slotName="'contentAfter'"></node-content>
     <el-collapse-transition>
       <div
         class="el-tree-node__children"
@@ -110,7 +109,7 @@
     components: {
       ElCollapseTransition,
       ElCheckbox,
-      NodeContent: {
+      /*NodeContent: {
         props: {
           node: {
             required: true
@@ -129,7 +128,32 @@
                 : <span class="el-tree-node__label">{ node.label }</span>
           );
         }
-      }
+      },*/
+        NodeContent: {
+            props: {
+                node: {
+                    required: true
+                },
+                slotName:{
+                    required: false
+                }
+            },
+            render(h) {
+                const parent = this.$parent;
+                const tree = parent.tree;
+                const node = this.node;
+                const isOther=this.slotName;
+                const slotName = this.slotName?this.slotName:'default';
+                const { data, store } = node;
+                return (
+                    parent.renderContent
+                        ? parent.renderContent.call(parent._renderProxy, h, { _self: tree.$vnode.context, node, data, store })
+                        : tree.$scopedSlots[slotName]
+                        ? tree.$scopedSlots[slotName]({ node, data })
+                        : isOther?'':<span class="el-tree-node__label">{ node.label }</span>
+                );
+            }
+        }
     },
 
     data() {
