@@ -11,6 +11,7 @@
       'is-focusable': !node.disabled,
       'is-checked': !node.disabled && node.checked,
       'is-select':node.data.select,
+      'is-fold-area':node.level>tree.foldLevel,
       'is-unselect':!node.data.select
     }"
     role="treeitem"
@@ -27,7 +28,7 @@
   >
     <node-content :node="node" :slotName="'contentBefore'"></node-content>
     <div class="el-tree-node__content"
-      :style="{ 'padding-left': (node.level - 1) * tree.indent + 'px' }">
+      :style="{ 'padding-left': ((node.level>tree.foldLevel)?(node.level-tree.foldLevel - 1):(node.level - 1)) * tree.indent + 'px' }">
       <span
         @click.stop="handleExpandIconClick"
         :class="[

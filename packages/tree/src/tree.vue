@@ -128,6 +128,10 @@
         type: Number,
         default: 18
       },
+      foldLevel: {
+        type: Number,
+        default: 20
+      },
       iconClass: String
     },
 
