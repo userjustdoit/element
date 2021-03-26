@@ -11,7 +11,7 @@
       'is-focusable': !node.disabled,
       'is-checked': !node.disabled && node.checked,
       'is-select':node.data.select,
-      'is-fold-area':node.level>tree.foldLevel,
+      'is-fold-area':node.level===(tree.foldLevel+1),
       'is-unselect':!node.data.select
     }"
     role="treeitem"
