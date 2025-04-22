@@ -3,7 +3,7 @@
       class="el-tree-node"
       @click.stop="handleClick"
       @contextmenu="($event) => this.handleContextMenu($event)"
-      v-show="node.visible"
+      v-if="node.visible"
       :class="{
       'is-expanded': expanded,
       'is-current': node.isCurrent,
@@ -26,9 +26,9 @@
       @drop.stop="handleDrop"
       ref="node"
   >
-    <node-content :node="node" :slotName="'contentBefore'" v-show="!node.hideNode"></node-content>
+    <node-content :node="node" :slotName="'contentBefore'" v-if="!node.hideNode"></node-content>
     <div class="el-tree-node__content"
-         v-show="!node.hideNode"
+         v-if="!node.hideNode"
          :style="{ 'padding-left': ((node.level>tree.foldLevel)?(node.level-tree.foldLevel - 1):(node.level - 1)) * tree.indent + 'px' }">
       <span
           @click.stop="handleExpandIconClick"
@@ -55,7 +55,7 @@
       <node-content :node="node" :slotName="'contentLeft'"></node-content>
       <node-content :node="node"></node-content>
     </div>
-    <node-content :node="node" :slotName="'contentAfter'" v-show="!node.hideNode"></node-content>
+    <node-content :node="node" :slotName="'contentAfter'" v-if="!node.hideNode"></node-content>
     <el-collapse-transition>
       <div
           class="el-tree-node__children"
