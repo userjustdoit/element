@@ -15,6 +15,7 @@
       :props="props"
       :render-after-expand="renderAfterExpand"
       :show-checkbox="showCheckbox"
+      :limitSize="limitSize"
       :key="getNodeKey(child)"
       :render-content="renderContent"
       @node-expand="handleNodeExpand">
@@ -100,6 +101,10 @@
       showCheckbox: {
         type: Boolean,
         default: false
+      },
+      limitSize: {
+        type: Number,
+        default: -1
       },
       draggable: {
         type: Boolean,

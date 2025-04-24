@@ -1,38 +1,40 @@
 <template>
   <div
-      class="el-tree-node"
-      @click.stop="handleClick"
-      @contextmenu="($event) => this.handleContextMenu($event)"
-      v-if="node.visible"
-      :class="{
+    class="el-tree-node"
+    @click.stop="handleClick"
+    @contextmenu="($event) => this.handleContextMenu($event)"
+    v-show="node.visible||isLoadMoreView"
+    :class="{
       'is-expanded': expanded,
       'is-current': node.isCurrent,
       'is-hidden': !node.visible,
       'is-focusable': !node.disabled,
       'is-checked': !node.disabled && node.checked,
-      'is-select':node.data.select,
+      'is-select':node.data.select&&!isLoadMoreView,
       'is-fold-area':node.level===(tree.foldLevel+1),
       'is-unselect':!node.data.select
     }"
-      role="treeitem"
-      tabindex="-1"
-      :aria-expanded="expanded"
-      :aria-disabled="node.disabled"
-      :aria-checked="node.checked"
-      :draggable="tree.draggable"
-      @dragstart.stop="handleDragStart"
-      @dragover.stop="handleDragOver"
-      @dragend.stop="handleDragEnd"
-      @drop.stop="handleDrop"
-      ref="node"
+    role="treeitem"
+    tabindex="-1"
+    :aria-expanded="expanded"
+    :aria-disabled="node.disabled"
+    :aria-checked="node.checked"
+    :draggable="tree.draggable"
+    @dragstart.stop="handleDragStart"
+    @dragover.stop="handleDragOver"
+    @dragend.stop="handleDragEnd"
+    @drop.stop="handleDrop"
+    ref="node"
   >
-    <node-content :node="node" :slotName="'contentBefore'" v-if="!node.hideNode"></node-content>
+    <node-content :node="node" :slotName="'contentBefore'" v-if="!node.hideNode&&!isLoadMoreView"></node-content>
     <div class="el-tree-node__content"
-         v-if="!node.hideNode"
-         :style="{ 'padding-left': ((node.level>tree.foldLevel)?(node.level-tree.foldLevel - 1):(node.level - 1)) * tree.indent + 'px' }">
-      <span
-          @click.stop="handleExpandIconClick"
-          :class="[
+         v-show="!node.hideNode"
+         :style="{'position':'relative','padding-left': ((node.level>tree.foldLevel)?(node.level-tree.foldLevel - 1):(node.level - 1)) * tree.indent + 'px' }">
+       <span
+        v-if="!node.hideNode"
+        :style="isLoadMoreView?{'visibility':'hidden'}:{}"
+        @click.stop="handleExpandIconClick"
+        :class="[
           { 'is-leaf': node.isLeaf, expanded: !node.isLeaf && expanded },
           'el-tree-node__expand-icon',
           tree.iconClass ? tree.iconClass : 'el-icon-caret-right'
@@ -40,38 +42,51 @@
       >
       </span>
       <el-checkbox
-          v-if="showCheckbox"
-          v-model="node.checked"
-          :indeterminate="node.indeterminate"
-          :disabled="!!node.disabled"
-          @click.native.stop
-          @change="handleCheckChange"
+        v-if="showCheckbox&&!node.hideNode"
+        :style="isLoadMoreView?{'visibility':'hidden'}:{}"
+        v-model="node.checked"
+        :indeterminate="node.indeterminate"
+        :disabled="!!node.disabled"
+        @click.native.stop
+        @change="handleCheckChange"
       >
       </el-checkbox>
       <span
-          v-if="node.loading"
-          class="el-tree-node__loading-icon el-icon-loading">
+        v-if="node.loading"
+        :style="isLoadMoreView?{'visibility':'hidden'}:{}"
+        class="el-tree-node__loading-icon el-icon-loading">
       </span>
-      <node-content :node="node" :slotName="'contentLeft'"></node-content>
-      <node-content :node="node"></node-content>
+      <node-content :node="node" :slotName="'contentLeft'" v-if="!node.hideNode" :style="isLoadMoreView?{'visibility':'hidden'}:{}" ></node-content>
+<!--      <span ref="contentStartRef"  v-if="childAllCount>1"></span>-->
+      <el-button type="info" size="mini" :title="node.parent?node.parent.label:''" @click="$emit('loadMoreClick')" v-if="isLoadMoreView">加载更多</el-button>
+      <node-content :node="node" v-else></node-content>
     </div>
-    <node-content :node="node" :slotName="'contentAfter'" v-if="!node.hideNode"></node-content>
-    <el-collapse-transition>
+    <node-content :node="node" :slotName="'contentAfter'" v-if="!node.hideNode&&!isLoadMoreView"></node-content>
+    <el-collapse-transition  v-if="!node.hideNode&&!isLoadMoreView">
       <div
-          class="el-tree-node__children"
-          v-if="!renderAfterExpand || childNodeRendered"
-          v-show="expanded"
-          role="group"
-          :aria-expanded="expanded"
+        class="el-tree-node__children"
+        :style="{'position':'relative'}"
+        ref="borderParentRef"
+        v-if="!renderAfterExpand || childNodeRendered"
+        v-show="expanded"
+        role="group"
+        :aria-expanded="expanded"
       >
+<!--        <div :style="{'position':'absolute','left':borderLineLeftPx+'px','top':borderLineTopPx+'px','bottom':borderLineBottomPx+'px','border-left': '1px dotted #000000','z-index':1}" v-if="childNodes.length>1&&borderLineLeftPx>=0">
+        </div>-->
         <el-tree-node
-            :render-content="renderContent"
-            v-for="child in node.childNodes"
-            :render-after-expand="renderAfterExpand"
-            :show-checkbox="showCheckbox"
-            :key="getNodeKey(child)"
-            :node="child"
-            @node-expand="handleChildNodeExpand">
+          :render-content="renderContent"
+          v-for="(child,index) in childNodes"
+          :childIndexCurrent="index"
+          :childAllCount="childNodes.length"
+          :render-after-expand="renderAfterExpand"
+          :show-checkbox="showCheckbox"
+          :limitSize="limitSize"
+          :key="getNodeKey(child)"
+          :node="child"
+          @node-expand="handleChildNodeExpand">
+        </el-tree-node>
+        <el-tree-node :isLoadMoreView="showLoadMore"  :limitSize="limitSize" :show-checkbox="showCheckbox"  @loadMoreClick="loadMoreClick" @refreshClick="refreshClick" :node="childNodes[childNodes.length-1]" v-if="showLoadMore">
         </el-tree-node>
       </div>
     </el-collapse-transition>
@@ -81,8 +96,11 @@
 <script type="text/jsx">
 import ElCollapseTransition from 'element-ui/src/transitions/collapse-transition'
 import ElCheckbox from 'element-ui/packages/checkbox'
+import ElButton from 'element-ui/packages/button'
 import emitter from 'element-ui/src/mixins/emitter'
 import {getNodeKey} from './model/util'
+
+let $log=console.log
 
 export default {
   name: 'ElTreeNode',
@@ -96,6 +114,22 @@ export default {
       default () {
         return {}
       }
+    },
+    childIndexCurrent:{
+      type: Number,
+      default: -1
+    },
+    childAllCount:{
+      type: Number,
+      default: -1
+    },
+    limitSize: {
+      type: Number,
+      default: -1
+    },
+    isLoadMoreView: {
+      type: Boolean,
+      default: false
     },
     props: {},
     renderContent: Function,
@@ -111,7 +145,8 @@ export default {
 
   components: {
     ElCollapseTransition,
-    ElCheckbox, /*NodeContent: {
+    ElCheckbox,
+    ElButton, /*NodeContent: {
      props: {
      node: {
      required: true
@@ -166,10 +201,44 @@ export default {
       expanded: false,
       childNodeRendered: false,
       oldChecked: null,
-      oldIndeterminate: null
+      oldIndeterminate: null,
+      showCount:-1,
+      /*borderLineLeftPx:-1,
+      borderLineTopPx:0,
+      borderLineBottomPx:0,
+      borderLineRightPx:0,*/
     }
   },
-
+  computed: {
+    showLoadMore(){
+      return this.showCount<this.node.childNodes.length
+    },
+    childNodes(){
+      if(this.showLoadMore){
+        return this.node.childNodes.slice(0,this.showCount)
+      }
+      return this.node.childNodes
+    },
+    // borderLineLeftPx(){
+    //   const parent = this.$refs.node;
+    //   const child = this.$refs.expandIcon;
+    //   $log(parent)
+    //   $log(child)
+    //   if (parent && child) {
+    //     const parentRect = parent.getBoundingClientRect();
+    //     const childRect = child.getBoundingClientRect();
+    //     if(childRect.width!==24){
+    //       return false
+    //     }
+    //     $log(JSON.stringify(parentRect))
+    //     $log(JSON.stringify(childRect))
+    //     // 相对于父元素的位置
+    //     const relativeLeft = childRect.left - parentRect.left+childRect.width/2;
+    //     return relativeLeft+'px'
+    //   }
+    //   return false
+    // },
+  },
   watch: {
     'node.indeterminate' (val) {
       this.handleSelectChange(this.node.checked, val)
@@ -184,15 +253,57 @@ export default {
       if (val) {
         this.childNodeRendered = true
       }
-    }
+    },
+    'limitSize' (val) {
+      this.refreshClick()
+    },
   },
 
   methods: {
+    // setContentLeftPx(childRect,childIndex){
+    //   const parent = this.$refs.borderParentRef;
+    //   if(childIndex===0){
+    //     if (parent) {
+    //       const parentRect = parent.getBoundingClientRect();
+    //       // 相对于父元素的位置
+    //       const relativeLeft = childRect.left - parentRect.left;
+    //       this.borderLineLeftPx=relativeLeft
+    //       const relativeTop = childRect.top - parentRect.top;
+    //       this.borderLineTopPx=relativeTop
+    //     }
+    //   }else if(childIndex===this.childNodes.length-1){
+    //     if (parent) {
+    //       const parentRect = parent.getBoundingClientRect();
+    //       const relativeBottom = parentRect.height-(childRect.top - parentRect.top);
+    //       this.borderLineBottomPx=relativeBottom
+    //     }
+    //   }
+    // },
+    // emitContentLeftPx(){
+    //     const child = this.$refs.contentStartRef;
+    //     if (child) {
+    //       const childRect = child.getBoundingClientRect();
+    //       this.$emit('setContentLeftPx',childRect,this.childIndexCurrent)
+    //     }
+    // },
+    loadMoreClick(){
+      this.showCount=this.showCount+this.limitSize
+    },
+    refreshClick(){
+      if(this.limitSize>0){
+        this.showCount=this.limitSize
+      }else{
+        this.showCount=10000000
+      }
+    },
     getNodeKey (node) {
       return getNodeKey(this.tree.nodeKey, node.data)
     },
 
     handleSelectChange (checked, indeterminate) {
+      if(this.isLoadMoreView){
+        return
+      }
       if (this.oldChecked !== checked && this.oldIndeterminate !== indeterminate) {
         this.tree.$emit('check-change', this.node.data, checked, indeterminate)
       }
@@ -201,6 +312,9 @@ export default {
     },
 
     handleClick () {
+      if(this.isLoadMoreView){
+        return
+      }
       const store = this.tree.store
       store.setCurrentNode(this.node)
       this.tree.$emit('current-change', store.currentNode ? store.currentNode.data : null, store.currentNode)
@@ -217,6 +331,9 @@ export default {
     },
 
     handleContextMenu (event) {
+      if(this.isLoadMoreView){
+        return
+      }
       if (this.tree._events['node-contextmenu'] && this.tree._events['node-contextmenu'].length > 0) {
         event.stopPropagation()
         event.preventDefault()
@@ -225,6 +342,9 @@ export default {
     },
 
     handleExpandIconClick () {
+      if(this.isLoadMoreView){
+        return
+      }
       if (this.node.isLeaf) return
       if (this.expanded) {
         this.tree.$emit('node-collapse', this.node.data, this.node, this)
@@ -236,6 +356,9 @@ export default {
     },
 
     handleCheckChange (value, ev) {
+      if(this.isLoadMoreView){
+        return
+      }
       this.node.setChecked(ev.target.checked, !this.tree.checkStrictly)
       this.$nextTick(() => {
         const store = this.tree.store
@@ -249,32 +372,49 @@ export default {
     },
 
     handleChildNodeExpand (nodeData, node, instance) {
+      if(this.isLoadMoreView){
+        return
+      }
       this.broadcast('ElTreeNode', 'tree-node-expand', node)
       this.tree.$emit('node-expand', nodeData, node, instance)
     },
 
     handleDragStart (event) {
+      if(this.isLoadMoreView){
+        return
+      }
       if (!this.tree.draggable) return
       this.tree.$emit('tree-node-drag-start', event, this)
     },
 
     handleDragOver (event) {
+      if(this.isLoadMoreView){
+        return
+      }
       if (!this.tree.draggable) return
       this.tree.$emit('tree-node-drag-over', event, this)
       event.preventDefault()
     },
 
     handleDrop (event) {
+      if(this.isLoadMoreView){
+        return
+      }
       event.preventDefault()
     },
 
     handleDragEnd (event) {
+      if(this.isLoadMoreView){
+        return
+      }
       if (!this.tree.draggable) return
       this.tree.$emit('tree-node-drag-end', event, this)
     }
   },
 
   created () {
+    this.refreshClick()
+
     const parent = this.$parent
 
     if (parent.isTree) {
@@ -307,6 +447,20 @@ export default {
         }
       })
     }
-  }
+  },
+  // updated() {
+  //   if(this.childIndexCurrent===0||this.childIndexCurrent===this.childAllCount-1){
+  //     this.$nextTick(()=>{
+  //       this.emitContentLeftPx()
+  //     })
+  //   }
+  // },
+  // mounted() {
+  //   if(this.childIndexCurrent===0||this.childIndexCurrent===this.childAllCount-1){
+  //     this.$nextTick(()=>{
+  //       this.emitContentLeftPx()
+  //     })
+  //   }
+  // }
 }
 </script>
