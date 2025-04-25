@@ -58,7 +58,7 @@
       </span>
       <node-content :node="node" :slotName="'contentLeft'" v-if="!node.hideNode" :style="isLoadMoreView?{'visibility':'hidden'}:{}" ></node-content>
 <!--      <span ref="contentStartRef"  v-if="childAllCount>1"></span>-->
-      <el-button type="info" size="mini" :title="node.parent?node.parent.label:''" @click="$emit('loadMoreClick')" v-if="isLoadMoreView">加载更多</el-button>
+      <el-button type="info" size="mini" :title="node.parent?node.parent.label:''" @click="$emit('loadMoreClick')" v-if="isLoadMoreView">{{loadMoreText}}</el-button>
       <node-content :node="node" v-else></node-content>
     </div>
     <node-content :node="node" :slotName="'contentAfter'" v-if="!node.hideNode&&!isLoadMoreView"></node-content>
@@ -74,6 +74,8 @@
       >
 <!--        <div :style="{'position':'absolute','left':borderLineLeftPx+'px','top':borderLineTopPx+'px','bottom':borderLineBottomPx+'px','border-left': '1px dotted #000000','z-index':1}" v-if="childNodes.length>1&&borderLineLeftPx>=0">
         </div>-->
+        <el-tree-node :isLoadMoreView="showLoadMore" :limitSize="limitSize" :initLimitedSize="initLimitedSize" :limitRefresh="limitRefresh" :show-checkbox="showCheckbox" loadMoreText="刷新" @loadMoreClick="refreshClick" :node="childNodes[childNodes.length-1]" v-if="showRefresh">
+        </el-tree-node>
         <el-tree-node
           :render-content="renderContent"
           v-for="(child,index) in childNodes"
@@ -82,11 +84,13 @@
           :render-after-expand="renderAfterExpand"
           :show-checkbox="showCheckbox"
           :limitSize="limitSize"
+          :initLimitedSize="initLimitedSize"
+          :limitRefresh="limitRefresh"
           :key="getNodeKey(child)"
           :node="child"
           @node-expand="handleChildNodeExpand">
         </el-tree-node>
-        <el-tree-node :isLoadMoreView="showLoadMore"  :limitSize="limitSize" :show-checkbox="showCheckbox"  @loadMoreClick="loadMoreClick" @refreshClick="refreshClick" :node="childNodes[childNodes.length-1]" v-if="showLoadMore">
+        <el-tree-node :isLoadMoreView="showLoadMore" :limitSize="limitSize" :initLimitedSize="initLimitedSize" :limitRefresh="limitRefresh" :show-checkbox="showCheckbox"  @loadMoreClick="loadMoreClick" :node="childNodes[childNodes.length-1]" v-if="showLoadMore">
         </el-tree-node>
       </div>
     </el-collapse-transition>
@@ -127,9 +131,21 @@ export default {
       type: Number,
       default: -1
     },
+    initLimitedSize: {
+      type: Number,
+      default: -1
+    },
+    limitRefresh: {
+      type: Boolean,
+      default: false
+    },
     isLoadMoreView: {
       type: Boolean,
       default: false
+    },
+    loadMoreText: {
+      type: String,
+      default: "加载更多"
     },
     props: {},
     renderContent: Function,
@@ -210,10 +226,25 @@ export default {
     }
   },
   computed: {
+    initChildNodes(){
+      return this.node.childNodes.length>0
+    },
+    showRefresh(){
+      return this.limitRefresh&&this.initChildNodes&&this.showCount>this.limitSize&&this.enableLoadMore
+    },
+    enableLoadMore(){
+      return this.limitSize>0&&(this.node.childNodes.length>this.limitSize)
+    },
     showLoadMore(){
-      return this.showCount<this.node.childNodes.length
+      if(this.showCount<0){
+        this.refreshClick()
+      }
+      return this.initChildNodes&&(this.showCount<this.node.childNodes.length)&&this.enableLoadMore
     },
     childNodes(){
+      if(!this.initChildNodes){
+        return []
+      }
       if(this.showLoadMore){
         return this.node.childNodes.slice(0,this.showCount)
       }
@@ -254,9 +285,9 @@ export default {
         this.childNodeRendered = true
       }
     },
-    'limitSize' (val) {
-      this.refreshClick()
-    },
+    // 'limitSize' (val) {
+    //   this.refreshClick()
+    // },
   },
 
   methods: {
@@ -291,7 +322,11 @@ export default {
     },
     refreshClick(){
       if(this.limitSize>0){
-        this.showCount=this.limitSize
+        let showCount = this.limitSize
+        if(this.initLimitedSize>0){
+          showCount=this.initLimitedSize
+        }
+        this.showCount=showCount
       }else{
         this.showCount=10000000
       }
@@ -413,7 +448,6 @@ export default {
   },
 
   created () {
-    this.refreshClick()
 
     const parent = this.$parent
 

@@ -16,6 +16,8 @@
       :render-after-expand="renderAfterExpand"
       :show-checkbox="showCheckbox"
       :limitSize="limitSize"
+      :initLimitedSize="initLimitedSize"
+      :limitRefresh="limitRefresh"
       :key="getNodeKey(child)"
       :render-content="renderContent"
       @node-expand="handleNodeExpand">
@@ -105,6 +107,14 @@
       limitSize: {
         type: Number,
         default: -1
+      },
+      initLimitedSize: {
+        type: Number,
+        default: -1
+      },
+      limitRefresh: {
+        type: Boolean,
+        default: false
       },
       draggable: {
         type: Boolean,
